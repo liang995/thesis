@@ -13,7 +13,8 @@ sudo podman run -d --name=srcimage counter
 # containerid=$(pgrep -f expr)
 # sudo criu pre-dump --tree "$containerid" --images-dir ./before
 sudo podman container checkpoint srcimage -R --compress=none --export=checkpoint.tar
-./calls.sh &
+# ./calls.sh &
+./basecalls.sh &
 curls_program=$(pgrep -f calls.sh)
 #3: send pre-dump to Destination;
 sudo rsync -av -e "ssh -i $HOME/.ssh/othervmkey" /home/fedora/checkpoint.tar fedora@sts6440-vm2.cloud.sci.uwo.ca:/home/fedora/
@@ -28,8 +29,6 @@ counter=1 #counter for checking when we want to do a update for the destination
 do_update=3 # when counter hits this value we will do the update for the destination
 start_time=$(date +%s.%3N)
 previousoutput=-1
-precheckpointname="pre-checkpoint"
-endcheckpointname=".tar.gz"
 while [ $handoffSignalReceived -eq 0 ]
 do
 #7: switch (Event)
@@ -45,6 +44,7 @@ do
         then
             #if the counter of memory change is not the same as we want before we do update increment
             #(we don't want to send the mirror too often as that causes too much delay)
+            echo "got here"
             ((++previousoutput))
             if [[ $counter -ne "$do_update" ]]
             then
@@ -53,16 +53,13 @@ do
                 #9: checkpoint();
                 #10: calculate_memory_difference();
                 # sudo criu pre-dump --tree "$containerid" --images-dir ./before
-                # sudo podman container checkpoint -P -e pre-checkpoint.tar.gz srcimage
-                newcheckpointname="$precheckpointname$handoff_counter$endcheckpointname"
-                echo $newcheckpointname
-                sudo podman container checkpoint -P -e $newcheckpointname srcimage
+                sudo podman container checkpoint -P -e pre-checkpoint.tar.gz srcimage
                 #11: send_sync_event();
-                sudo rsync -av --log-file=src.log -e "ssh -i $HOME/.ssh/othervmkey" /home/fedora/$newcheckpointname fedora@sts6440-vm2.cloud.sci.uwo.ca:/home/fedora/
+                sudo rsync -av --log-file=src.log -e "ssh -i $HOME/.ssh/othervmkey" /home/fedora/pre-checkpoint.tar.gz fedora@sts6440-vm2.cloud.sci.uwo.ca:/home/fedora/
                 scp -i /home/fedora/.ssh/othervmkey update fedora@sts6440-vm2.cloud.sci.uwo.ca:/home/fedora/
                 counter=1
                 ((++handoff_counter))
-                # sleep 1.6
+                sleep 1.6
             fi
         fi
 #12: case handoffRequest

@@ -25,6 +25,8 @@ handoff_counter=0 #the counter that tries to reach var before we handoff
 counter=0 #counter for checking when we want to do a update for the destination
 do_update=3 # when counter hits this value we will do the update for the destination
 start_time=$(date +%s.%3N)
+precheckpointname="pre-checkpoint"
+endcheckpointname=".tar.gz"
 while [ $handoffSignalReceived -eq 0 ]
 do
 #7: switch (Event)
@@ -46,13 +48,15 @@ do
                 #9: checkpoint();
                 #10: calculate_memory_difference();
                 # sudo criu pre-dump --tree "$containerid" --images-dir ./before
-                sudo podman container checkpoint -P -e pre-checkpoint.tar.gz srcimage
+                newcheckpointname="$precheckpointname$handoff_counter$endcheckpointname"
+                echo $newcheckpointname
+                sudo podman container checkpoint -P -e $newcheckpointname srcimage
                 #11: send_sync_event();
-                sudo rsync -av --log-file=src.log -e "ssh -i $HOME/.ssh/othervmkey" /home/fedora/pre-checkpoint.tar.gz fedora@sts6440-vm2.cloud.sci.uwo.ca:/home/fedora/
+                sudo rsync -av --log-file=src.log -e "ssh -i $HOME/.ssh/othervmkey" /home/fedora/$newcheckpointname fedora@sts6440-vm2.cloud.sci.uwo.ca:/home/fedora/
                 scp -i /home/fedora/.ssh/othervmkey update fedora@sts6440-vm2.cloud.sci.uwo.ca:/home/fedora/
                 counter=0
                 ((++handoff_counter))
-                sleep 1.8
+                # sleep 1.8
             fi
         fi
 #12: case handoffRequest

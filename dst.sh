@@ -18,7 +18,10 @@ sleep 5
 #7: handoffSignalReceived = False;
 handoffSignalReceived=false
 newcontainername="srcimage"
+basecheckpointname="pre-checkpoint"
+endcheckpointname=".tar.gz"
 i=1
+counter=0
 #8: while handoffSignalReceived == False
 while [ $handoffSignalReceived == false ]
 do
@@ -26,21 +29,28 @@ do
     #10: apply memoryDifference;
     if [[ ! -f signal ]]
     then
-        if [[ -f update ]]
+        if [[ counter -ne 3 ]]
+        # if [[ -f update ]]
         then
             # sudo criu dump --tree "$containerid" --images-dir ./after \
             # --prev-images-dir ./before --leave-stopped --track-mem
             # #11: restore VM/container;
             # sudo criu restore --images-dir /~/home
             # echo "got here"
-            start_time=$(date +%s.%3N)
             newcontainername1="$newcontainername$i"
-            sudo podman container restore --name $newcontainername1 --import-previous pre-checkpoint.tar.gz --import checkpoint.tar
-            end_time=$(date +%s.%3N)
-            elapsed=$(echo "scale=3; $end_time - $start_time" | bc)
-            printf "Before Hand-off migration restore downtime: %s\n" "$elapsed" >> updates_log
-            rm update
-            ((++i))
+            prevcheckpointname="$basecheckpointname$counter$endcheckpointname" #added
+            if [[ -f "$prevcheckpointname" ]] #added
+            then #added
+                start_time=$(date +%s.%3N)
+                # sudo podman container restore --name $newcontainername1 --import-previous pre-checkpoint.tar.gz --import checkpoint.tar
+                sudo podman container restore --name $newcontainername1 --import-previous $prevcheckpointname --import checkpoint.tar
+                end_time=$(date +%s.%3N)
+                elapsed=$(echo "scale=3; $end_time - $start_time" | bc)
+                printf "Before Hand-off migration restore downtime: %s\n" "$elapsed" >> updates_log
+                # rm update
+                ((++i))
+                ((++counter))
+            fi
         fi
     #12: case handoffRequest
     else
