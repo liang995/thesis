@@ -4,7 +4,6 @@
 sudo podman run -d --name=srcimage testimage
 #2: create pre-dump memory snapshots (after tree is pid of the container);
 containerid=$(pgrep -f expr)
-# sudo criu pre-dump --tree "$containerid" --images-dir ./before
 sudo podman container checkpoint srcimage -R --compress=none --export=checkpoint.tar
 #3: send pre-dump to Destination;
 sudo rsync -av -e "ssh -i $HOME/.ssh/othervmkey" /home/fedora/checkpoint.tar fedora@sts6440-vm2.cloud.sci.uwo.ca:/home/fedora/
